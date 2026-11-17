@@ -48,7 +48,7 @@ if ($env:FIBSEM_OPERATOR_TOKEN) {
 $env:FIBSEM_HOME = $State
 $register = 'import sys; from fibsem import config; [config.register_configuration(p) for p in sys.argv[2:]]; config.set_default_configuration(config.register_configuration(sys.argv[1]))'
 $all = @(Get-ChildItem $configs -Filter *.yaml | ForEach-Object FullName)
-& $python -c $register $configPath @all
+& $python -I -c $register $configPath @all
 if ($LASTEXITCODE -ne 0) { throw "registering the configurations failed" }
 
 $run = "cd /d `"$configs`" && set FIBSEM_HOME=$State&& `"$exe`" --config `"$configPath`" --serve-microscope " +
