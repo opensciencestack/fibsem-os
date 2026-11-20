@@ -8,8 +8,10 @@ Every YAML in oss\configs is registered, so a client can switch between them wit
 POST /microscope/disconnect and POST /microscope/connect {"configuration": "<name>"};
 -Config picks the one the server starts with.
 
-The server runs with FIBSEM_SIM_NO_BLOCKLIST=1, so a client may vent, pump, link
-the stage and switch beams on the simulated microscope.
+The server gets every KEY=VALUE line of oss\.env as an environment variable, read
+when this script runs, so rerun it after editing that file. ALLOW_BLOCKLIST=true
+there applies the App Server's blocklist; left out or false, a client may vent, pump,
+link the stage and switch beams.
 
 Set FIBSEM_OPERATOR_TOKEN to pin the operator token, the bearer token OSS apps send.
 Without it the server keeps the token in <State>\operator-token.json, or makes one.
@@ -54,7 +56,19 @@ $all = @(Get-ChildItem $configs -Filter *.yaml | ForEach-Object FullName)
 & $python -I -c $register $configPath @all
 if ($LASTEXITCODE -ne 0) { throw "registering the configurations failed" }
 
-$run = "cd /d `"$configs`" && set FIBSEM_HOME=$State&& set FIBSEM_SIM_NO_BLOCKLIST=1&& `"$exe`" --config `"$configPath`" --serve-microscope " +
+$envFile = Join-Path $PSScriptRoot '.env'
+$serverEnv = ''
+if (Test-Path $envFile) {
+    foreach ($line in Get-Content $envFile) {
+        $line = $line.Trim()
+        if (-not $line -or $line.StartsWith('#')) { continue }
+        $name, $value = $line -split '=', 2
+        if ($null -eq $value -or -not $name.Trim()) { throw "${envFile}: '$line' is not KEY=VALUE" }
+        $serverEnv += "set `"$($name.Trim())=$($value.Trim())`"&& "
+    }
+}
+
+$run = "cd /d `"$configs`" && set FIBSEM_HOME=$State&& $serverEnv`"$exe`" --config `"$configPath`" --serve-microscope " +
        "--port $Port --discovery `"$State\app-server-$Port.json`" >> `"$log.out.log`" 2>> `"$log.err.log`""
 Register-ScheduledTask -TaskName $task -Force `
     -Action (New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/s /c `"$run`"") `

@@ -184,25 +184,20 @@ def test_the_gis_and_sputter_coater_are_the_operators(microscope):
     assert coater.current.get_value() > 0
 
 
-def test_a_simulator_can_lift_the_blocklist_for_its_own_devices_only(
+def test_the_blocklist_applies_only_when_the_deploy_turns_it_on(
     microscope, monkeypatch
 ):
-    """FIBSEM_SIM_NO_BLOCKLIST=1 lifts it for the Demo driver's devices; a device
-    of any other driver stays blocked."""
-    from fibsem.drivers.demo.devices import DemoChamber
-
-    class OtherDriverChamber(DemoChamber):
-        pass
-
-    other = OtherDriverChamber.__new__(OtherDriverChamber)
+    """ALLOW_BLOCKLIST=true applies it; unset or false, nothing is blocked."""
     chamber, stage = microscope.devices["chamber"], microscope.devices["stage"]
+    for value in (None, "false"):
+        if value is None:
+            monkeypatch.delenv("ALLOW_BLOCKLIST")
+        else:
+            monkeypatch.setenv("ALLOW_BLOCKLIST", value)
+        assert blocked(chamber, "command", "vent") is None, value
+        assert blocked(stage, "command", "link") is None, value
+        assert blocked(microscope.devices["electron"], "write", "on") is None, value
 
-    monkeypatch.setenv("FIBSEM_SIM_NO_BLOCKLIST", "1")
-    assert blocked(chamber, "command", "vent") is None
-    assert blocked(stage, "command", "link") is None
-    assert blocked(microscope.devices["electron"], "write", "on") is None
-    assert blocked(other, "command", "vent")
-
-    monkeypatch.delenv("FIBSEM_SIM_NO_BLOCKLIST")
+    monkeypatch.setenv("ALLOW_BLOCKLIST", "true")
     assert blocked(chamber, "command", "vent")
     assert blocked(stage, "command", "link")

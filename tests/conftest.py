@@ -235,6 +235,13 @@ def _isolate_cwd(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _blocklist_on(monkeypatch):
+    """Apply the App Server's blocklist in every test, as a real microscope's
+    deploy does with ALLOW_BLOCKLIST=true; unset, nothing is blocked."""
+    monkeypatch.setenv("ALLOW_BLOCKLIST", "true")
+
+
+@pytest.fixture(autouse=True)
 def _restore_excepthooks(monkeypatch):
     """Put sys.excepthook and threading.excepthook back after every test: a test
     that runs a program's main() installs fibsem.diagnostics' hooks, which would

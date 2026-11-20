@@ -96,11 +96,8 @@ def rules() -> List[Dict[str, str]]:
 def blocked(device: Device, kind: str, name: str) -> Optional[str]:
     """Why the agent may never use *name* (a parameter write when *kind* is
     "write", a command when "command") on *device*, or None when it may.
-    With ``FIBSEM_SIM_NO_BLOCKLIST=1``, a Demo driver's device is never blocked:
-    a simulator has no hardware to protect, and a real device stays blocked."""
-    if os.environ.get("FIBSEM_SIM_NO_BLOCKLIST") == "1" and type(
-        device
-    ).__module__.startswith("fibsem.drivers.demo"):
+    Nothing is blocked unless the deploy sets ``ALLOW_BLOCKLIST=true``."""
+    if os.environ.get("ALLOW_BLOCKLIST", "").lower() != "true":
         return None
     for cls, blocks in _BLOCKED:
         if isinstance(device, cls):
