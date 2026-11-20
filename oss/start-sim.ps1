@@ -8,6 +8,9 @@ Every YAML in oss\configs is registered, so a client can switch between them wit
 POST /microscope/disconnect and POST /microscope/connect {"configuration": "<name>"};
 -Config picks the one the server starts with.
 
+The server runs with FIBSEM_SIM_NO_BLOCKLIST=1, so a client may vent, pump, link
+the stage and switch beams on the simulated microscope.
+
 Set FIBSEM_OPERATOR_TOKEN to pin the operator token, the bearer token OSS apps send.
 Without it the server keeps the token in <State>\operator-token.json, or makes one.
 #>
@@ -51,7 +54,7 @@ $all = @(Get-ChildItem $configs -Filter *.yaml | ForEach-Object FullName)
 & $python -I -c $register $configPath @all
 if ($LASTEXITCODE -ne 0) { throw "registering the configurations failed" }
 
-$run = "cd /d `"$configs`" && set FIBSEM_HOME=$State&& `"$exe`" --config `"$configPath`" --serve-microscope " +
+$run = "cd /d `"$configs`" && set FIBSEM_HOME=$State&& set FIBSEM_SIM_NO_BLOCKLIST=1&& `"$exe`" --config `"$configPath`" --serve-microscope " +
        "--port $Port --discovery `"$State\app-server-$Port.json`" >> `"$log.out.log`" 2>> `"$log.err.log`""
 Register-ScheduledTask -TaskName $task -Force `
     -Action (New-ScheduledTaskAction -Execute 'cmd.exe' -Argument "/s /c `"$run`"") `

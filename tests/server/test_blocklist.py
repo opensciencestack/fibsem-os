@@ -182,3 +182,27 @@ def test_the_gis_and_sputter_coater_are_the_operators(microscope):
     assert blocked(coater, "write", "current")
     assert gis.state.get_value() is not None
     assert coater.current.get_value() > 0
+
+
+def test_a_simulator_can_lift_the_blocklist_for_its_own_devices_only(
+    microscope, monkeypatch
+):
+    """FIBSEM_SIM_NO_BLOCKLIST=1 lifts it for the Demo driver's devices; a device
+    of any other driver stays blocked."""
+    from fibsem.drivers.demo.devices import DemoChamber
+
+    class OtherDriverChamber(DemoChamber):
+        pass
+
+    other = OtherDriverChamber.__new__(OtherDriverChamber)
+    chamber, stage = microscope.devices["chamber"], microscope.devices["stage"]
+
+    monkeypatch.setenv("FIBSEM_SIM_NO_BLOCKLIST", "1")
+    assert blocked(chamber, "command", "vent") is None
+    assert blocked(stage, "command", "link") is None
+    assert blocked(microscope.devices["electron"], "write", "on") is None
+    assert blocked(other, "command", "vent")
+
+    monkeypatch.delenv("FIBSEM_SIM_NO_BLOCKLIST")
+    assert blocked(chamber, "command", "vent")
+    assert blocked(stage, "command", "link")
